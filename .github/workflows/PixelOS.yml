@@ -1,0 +1,42 @@
+name: PixelOS_Kernel_CI
+
+on:
+  workflow_dispatch:
+    inputs:
+        KernelSU:
+            description: 'KernelSU'
+            required: true
+            default: false
+            type: boolean
+
+jobs:
+  PixelOS_Kernel_CI:
+    name: PixelOS Kernel CI
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Checkout Repository
+      uses: actions/checkout@main
+
+    - name: Set up Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential flex bison bc
+
+    - name: Build Kernel
+      run: |
+        git clone https://github.com/inferno0230/kernel_oneplus_martini.git --depth=1 -b fourteen kernel
+        cd kernel
+        wget -O build.sh https://raw.githubusercontent.com/inferno0230/kernel_oneplus_martini/fourteen/build.sh
+        chmod +x build.sh
+        if [ ${{ inputs.KernelSU }} = true ]; then
+            sed -i 's/KernelSU=false/KernelSU=true/' build.sh
+        fi
+        ./build.sh
+        echo "KERNEL_OUT=$(pwd)/out" >> $GITHUB_ENV
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: PixelOS_Kernel
+        path: ${{ env.KERNEL_OUT }}/kernel.zip
